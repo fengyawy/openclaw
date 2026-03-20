@@ -109,6 +109,138 @@ pnpm gateway:watch
 
 Note: `pnpm openclaw ...` runs TypeScript directly (via `tsx`). `pnpm build` produces `dist/` for running via Node / the packaged `openclaw` binary.
 
+## Production deployment (from source)
+
+Build and install as a global CLI command:
+
+```bash
+git clone https://github.com/your-fork/openclaw.git
+cd openclaw
+pnpm install
+pnpm build
+pnpm link --global
+```
+
+Now you can run `openclaw` anywhere:
+
+```bash
+# macOS (LaunchAgent)
+openclaw gateway start
+
+# Linux / foreground (production)
+openclaw gateway run
+```
+
+Use a process manager on Linux:
+
+```bash
+# PM2
+pm2 start $(which openclaw) --name openclaw -- gateway run
+pm2 save
+
+# Or systemd (ExecStart=/usr/local/bin/openclaw gateway run)
+```
+
+## Production deployment with IM Gateway
+
+When using the [openclaw-im-gateway-svc](https://github.com/openclaw/openclaw-im-gateway-svc) as a proxy for IM channels, OpenClaw runs in passive mode. The gateway handles webhook registration, user binding, and quota checks. OpenClaw only processes messages and sends replies.
+
+### Telegram (with gateway)
+
+```json5
+{
+  channels: {
+    telegram: {
+      enabled: true,
+      botToken: "123456:ABC-DEF-your-bot-token",
+      passiveMode: true,
+      webhookHost: "0.0.0.0",
+      dmPolicy: "open"
+    }
+  }
+}
+```
+
+- `passiveMode: true` -- skips `setWebhook`, `deleteWebhook`, `setMyCommands`. The gateway manages bot registration via `/admin/setup`.
+- `webhookHost: "0.0.0.0"` -- required when gateway and OpenClaw are on different machines. Omit if on the same machine.
+- `dmPolicy: "open"` -- user binding and quota checks are handled by the gateway, no need for OpenClaw-level pairing.
+- `botToken` -- still required. OpenClaw uses it to send replies via Telegram Bot API.
+- Do NOT configure `customCommands` -- manage commands through the gateway's `/admin/setup` to avoid conflicts.
+
+### Slack (with gateway)
+
+```json5
+{
+  channels: {
+    slack: {
+      enabled: true,
+      botToken: "xoxb-your-slack-bot-token",
+      appToken: "xapp-your-slack-app-token",
+      dmPolicy: "open"
+    }
+  }
+}
+```
+
+- `botToken` + `appToken` -- still required for sending replies and Socket Mode fallback.
+- `dmPolicy: "open"` -- gateway handles user binding.
+- Slash commands are configured in the Slack App dashboard, not in OpenClaw.
+
+### LINE (with gateway)
+
+```json5
+{
+  channels: {
+    line: {
+      enabled: true,
+      channelAccessToken: "your-line-channel-access-token",
+      channelSecret: "your-line-channel-secret",
+      webhookHost: "0.0.0.0",
+      dmPolicy: "open"
+    }
+  }
+}
+```
+
+- `channelAccessToken` -- still required for sending replies via LINE Messaging API.
+- `channelSecret` -- used to verify webhook signatures on the OpenClaw side.
+- `webhookHost: "0.0.0.0"` -- required when gateway and OpenClaw are on different machines.
+- `dmPolicy: "open"` -- gateway handles user binding.
+- Webhook URL is set manually in the LINE Developers Console, pointing to the gateway address.
+
+### Model configuration
+
+```json5
+{
+  models: {
+    providers: {
+      openai: {
+        baseUrl: "https://api.openai.com/v1",
+        apiKey: "sk-your-openai-api-key",
+        api: "openai-completions",
+        models: [
+          {
+            id: "gpt-4.1",
+            name: "GPT-4.1",
+            reasoning: false,
+            input: ["text", "image"],
+            contextWindow: 1047576,
+            maxTokens: 32768
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+### Startup order
+
+1. Start Redis
+2. Start the IM gateway (`openclaw-im-gateway-svc`)
+3. Start OpenClaw (`openclaw gateway run`)
+4. Call gateway `/admin/setup` to register Telegram webhook and commands
+
 ## Security defaults (DM access)
 
 OpenClaw connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.

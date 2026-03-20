@@ -249,6 +249,12 @@ export const TelegramAccountSchemaBase = z
       .describe(
         "Path to the self-signed certificate (PEM) to upload to Telegram during webhook registration. Required for self-signed certs (direct IP or no domain).",
       ),
+    passiveMode: z
+      .boolean()
+      .optional()
+      .describe(
+        "Skip Bot API registration calls (setWebhook, deleteWebhook, setMyCommands) so an external proxy can manage the bot token.",
+      ),
     actions: z
       .object({
         reactions: z.boolean().optional(),
