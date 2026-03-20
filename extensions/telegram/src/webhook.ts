@@ -111,6 +111,7 @@ export async function startTelegramWebhook(opts: {
   healthPath?: string;
   publicUrl?: string;
   webhookCertPath?: string;
+  passiveMode?: boolean;
 }) {
   const path = opts.path ?? "/telegram-webhook";
   const healthPath = opts.healthPath ?? "/healthz";
@@ -262,24 +263,26 @@ export async function startTelegramWebhook(opts: {
     port,
   });
 
-  try {
-    await withTelegramApiErrorLogging({
-      operation: "setWebhook",
-      runtime,
-      fn: () =>
-        bot.api.setWebhook(publicUrl, {
-          secret_token: secret,
-          allowed_updates: resolveTelegramAllowedUpdates(),
-          certificate: opts.webhookCertPath ? new InputFile(opts.webhookCertPath) : undefined,
-        }),
-    });
-  } catch (err) {
-    server.close();
-    void bot.stop();
-    if (diagnosticsEnabled) {
-      stopDiagnosticHeartbeat();
+  if (!opts.passiveMode) {
+    try {
+      await withTelegramApiErrorLogging({
+        operation: "setWebhook",
+        runtime,
+        fn: () =>
+          bot.api.setWebhook(publicUrl, {
+            secret_token: secret,
+            allowed_updates: resolveTelegramAllowedUpdates(),
+            certificate: opts.webhookCertPath ? new InputFile(opts.webhookCertPath) : undefined,
+          }),
+      });
+    } catch (err) {
+      server.close();
+      void bot.stop();
+      if (diagnosticsEnabled) {
+        stopDiagnosticHeartbeat();
+      }
+      throw err;
     }
-    throw err;
   }
 
   runtime.log?.(`webhook local listener on http://${host}:${boundPort}${path}`);
@@ -291,13 +294,15 @@ export async function startTelegramWebhook(opts: {
       return;
     }
     shutDown = true;
-    void withTelegramApiErrorLogging({
-      operation: "deleteWebhook",
-      runtime,
-      fn: () => bot.api.deleteWebhook({ drop_pending_updates: false }),
-    }).catch(() => {
-      // withTelegramApiErrorLogging has already emitted the failure.
-    });
+    if (!opts.passiveMode) {
+      void withTelegramApiErrorLogging({
+        operation: "deleteWebhook",
+        runtime,
+        fn: () => bot.api.deleteWebhook({ drop_pending_updates: false }),
+      }).catch(() => {
+        // withTelegramApiErrorLogging has already emitted the failure.
+      });
+    }
     server.close();
     void bot.stop();
     if (diagnosticsEnabled) {

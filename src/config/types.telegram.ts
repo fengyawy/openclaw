@@ -163,6 +163,8 @@ export type TelegramAccountConfig = {
   webhookPort?: number;
   /** Path to the self-signed certificate (PEM) to upload to Telegram during webhook registration. */
   webhookCertPath?: string;
+  /** Skip Bot API registration calls (setWebhook, deleteWebhook, setMyCommands) so an external proxy can manage the bot token. */
+  passiveMode?: boolean;
   /** Per-action tool gating (default: true for all). */
   actions?: TelegramActionConfig;
   /** Telegram thread/conversation binding overrides. */

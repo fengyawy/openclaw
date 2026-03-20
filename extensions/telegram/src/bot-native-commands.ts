@@ -145,6 +145,7 @@ export type RegisterTelegramNativeCommandsParams = {
   shouldSkipUpdate: (ctx: TelegramUpdateKeyContext) => boolean;
   telegramDeps?: TelegramBotDeps;
   opts: { token: string };
+  passiveMode?: boolean;
 };
 
 async function resolveTelegramCommandAuth(params: {
@@ -371,6 +372,7 @@ export const registerTelegramNativeCommands = ({
   shouldSkipUpdate,
   telegramDeps = defaultTelegramBotDeps,
   opts,
+  passiveMode,
 }: RegisterTelegramNativeCommandsParams) => {
   const boundRoute =
     nativeEnabled && nativeSkillsEnabled
@@ -470,13 +472,16 @@ export const registerTelegramNativeCommands = ({
   }
   // Telegram only limits the setMyCommands payload (menu entries).
   // Keep hidden commands callable by registering handlers for the full catalog.
-  syncTelegramMenuCommands({
-    bot,
-    runtime,
-    commandsToRegister,
-    accountId,
-    botIdentity: opts.token,
-  });
+  // In passive mode, skip Bot API calls (setMyCommands) so an external proxy manages registration.
+  if (!passiveMode) {
+    syncTelegramMenuCommands({
+      bot,
+      runtime,
+      commandsToRegister,
+      accountId,
+      botIdentity: opts.token,
+    });
+  }
 
   const resolveCommandRuntimeContext = async (params: {
     msg: NonNullable<TelegramNativeCommandContext["message"]>;
@@ -936,7 +941,7 @@ export const registerTelegramNativeCommands = ({
         });
       }
     }
-  } else if (nativeDisabledExplicit) {
+  } else if (nativeDisabledExplicit && !passiveMode) {
     withTelegramApiErrorLogging({
       operation: "setMyCommands",
       runtime,

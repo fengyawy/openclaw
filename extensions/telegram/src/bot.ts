@@ -527,6 +527,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
     shouldSkipUpdate,
     opts,
     telegramDeps,
+    passiveMode: telegramCfg.passiveMode,
   });
 
   registerTelegramHandlers({
