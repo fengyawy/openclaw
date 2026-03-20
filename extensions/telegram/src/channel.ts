@@ -716,7 +716,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount, TelegramProb
         config: ctx.cfg,
         runtime: ctx.runtime,
         abortSignal: ctx.abortSignal,
-        useWebhook: Boolean(account.config.webhookUrl),
+        useWebhook: Boolean(account.config.webhookUrl) || Boolean(account.config.passiveMode),
         webhookUrl: account.config.webhookUrl,
         webhookSecret: account.config.webhookSecret,
         webhookPath: account.config.webhookPath,
