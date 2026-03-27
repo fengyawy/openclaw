@@ -162,7 +162,7 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
     };
 
     if (opts.useWebhook) {
-      await startTelegramWebhook({
+      const webhook = await startTelegramWebhook({
         token,
         accountId: account.accountId,
         config: cfg,
@@ -177,7 +177,7 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
         webhookCertPath: opts.webhookCertPath,
         passiveMode: opts.passiveMode,
       });
-      await waitForAbortSignal(opts.abortSignal);
+      await Promise.race([waitForAbortSignal(opts.abortSignal), webhook.closed]);
       return;
     }
 

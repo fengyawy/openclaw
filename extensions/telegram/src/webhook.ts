@@ -252,6 +252,9 @@ export async function startTelegramWebhook(opts: {
     port,
     host,
   });
+  server.on("error", (err) => {
+    runtime.log?.(`webhook server error: ${formatErrorMessage(err)}`);
+  });
   const boundAddress = server.address();
   const boundPort = boundAddress && typeof boundAddress !== "string" ? boundAddress.port : port;
 
@@ -313,5 +316,15 @@ export async function startTelegramWebhook(opts: {
     opts.abortSignal.addEventListener("abort", shutdown, { once: true });
   }
 
-  return { server, bot, stop: shutdown };
+  const closed = new Promise<void>((resolve, reject) => {
+    server.on("close", () => {
+      if (shutDown) {
+        resolve();
+      } else {
+        reject(new Error("Telegram webhook server closed unexpectedly"));
+      }
+    });
+  });
+
+  return { server, bot, stop: shutdown, closed };
 }
