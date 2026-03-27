@@ -319,8 +319,10 @@ export async function startTelegramWebhook(opts: {
   const closed = new Promise<void>((resolve, reject) => {
     server.on("close", () => {
       if (shutDown) {
+        runtime.log?.("webhook server closed (graceful shutdown)");
         resolve();
       } else {
+        runtime.log?.("webhook server closed unexpectedly — will trigger auto-restart");
         reject(new Error("Telegram webhook server closed unexpectedly"));
       }
     });
