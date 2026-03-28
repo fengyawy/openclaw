@@ -92,6 +92,7 @@ export function buildSystemPrompt(params: {
     userTimeFormat,
     contextFiles: params.contextFiles,
     ttsHint,
+    tone: params.config?.agents?.defaults?.tone,
     memoryCitationsMode: params.config?.memory?.citations,
   });
 }

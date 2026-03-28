@@ -54,39 +54,6 @@ import { appendUntrustedContext } from "./untrusted-context.js";
 type AgentDefaults = NonNullable<OpenClawConfig["agents"]>["defaults"];
 type ExecOverrides = Pick<ExecToolDefaults, "host" | "security" | "ask" | "node">;
 
-function buildTonePrompt(tone?: string): string {
-  switch (tone) {
-    case "professional":
-      return [
-        "## Tone",
-        "Adopt a professional tone in all replies:",
-        "- Use clear, precise language with proper grammar and punctuation.",
-        "- Avoid slang, contractions, and casual filler words.",
-        "- Be direct and concise; prefer structured responses (lists, headers) for complex answers.",
-        "- Maintain a respectful, competent, and composed voice.",
-      ].join("\n");
-    case "casual":
-      return [
-        "## Tone",
-        "Adopt a casual, friendly tone in all replies:",
-        "- Use natural, conversational language — contractions and colloquialisms are fine.",
-        "- Keep things light and approachable; a bit of humor is welcome when appropriate.",
-        "- Avoid overly formal phrasing, stiff structure, or corporate-speak.",
-        "- Still be helpful and accurate — casual does not mean careless.",
-      ].join("\n");
-    case "mirror":
-      return [
-        "## Tone",
-        "Mirror the user's writing style as closely as possible:",
-        "- Observe their sentence length, formality, emoji usage, punctuation, and vocabulary.",
-        "- Match their level of casualness or formality in your replies.",
-        "- If there are not enough messages to analyze yet, use a neutral tone and gradually adapt.",
-      ].join("\n");
-    default:
-      return "";
-  }
-}
-
 function buildResetSessionNoticeText(params: {
   provider: string;
   model: string;
@@ -301,13 +268,11 @@ export async function runPreparedReply(
   const inboundMetaPrompt = buildInboundMetaSystemPrompt(
     isNewSession ? sessionCtx : { ...sessionCtx, ThreadStarterBody: undefined },
   );
-  const tonePrompt = buildTonePrompt(cfg.agents?.defaults?.tone);
   const extraSystemPromptParts = [
     inboundMetaPrompt,
     groupChatContext,
     groupIntro,
     groupSystemPrompt,
-    tonePrompt,
   ].filter(Boolean);
   const baseBody = sessionCtx.BodyStripped ?? sessionCtx.Body ?? "";
   // Use CommandBody/RawBody for bare reset detection (clean message without structural context).

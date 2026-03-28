@@ -130,6 +130,7 @@ export async function resolveCommandsSystemPromptBundle(
     acpEnabled: params.cfg?.acp?.enabled !== false,
     runtimeInfo,
     sandboxInfo,
+    tone: params.cfg?.agents?.defaults?.tone,
     memoryCitationsMode: params.cfg?.memory?.citations,
   });
 

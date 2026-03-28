@@ -17,6 +17,40 @@ import { sanitizeForPromptLiteral } from "./sanitize-for-prompt.js";
 export type PromptMode = "full" | "minimal" | "none";
 type OwnerIdDisplay = "raw" | "hash";
 
+function buildToneSection(tone: "professional" | "casual" | "mirror"): string[] {
+  switch (tone) {
+    case "professional":
+      return [
+        "## Tone",
+        "Adopt a professional tone in all replies:",
+        "- Use clear, precise language with proper grammar and punctuation.",
+        "- Avoid slang, contractions, and casual filler words.",
+        "- Be direct and concise; prefer structured responses (lists, headers) for complex answers.",
+        "- Maintain a respectful, competent, and composed voice.",
+        "",
+      ];
+    case "casual":
+      return [
+        "## Tone",
+        "Adopt a casual, friendly tone in all replies:",
+        "- Use natural, conversational language — contractions and colloquialisms are fine.",
+        "- Keep things light and approachable; a bit of humor is welcome when appropriate.",
+        "- Avoid overly formal phrasing, stiff structure, or corporate-speak.",
+        "- Still be helpful and accurate — casual does not mean careless.",
+        "",
+      ];
+    case "mirror":
+      return [
+        "## Tone",
+        "Mirror the user's writing style as closely as possible:",
+        "- Observe their sentence length, formality, emoji usage, punctuation, and vocabulary.",
+        "- Match their level of casualness or formality in your replies.",
+        "- If there are not enough messages to analyze yet, use a neutral tone and gradually adapt.",
+        "",
+      ];
+  }
+}
+
 function buildSkillsSection(params: { skillsPrompt?: string; readToolName: string }) {
   const trimmed = params.skillsPrompt?.trim();
   if (!trimmed) {
@@ -231,6 +265,8 @@ export function buildAgentSystemPrompt(params: {
     level: "minimal" | "extensive";
     channel: string;
   };
+  /** Tone preset for agent replies. */
+  tone?: "professional" | "casual" | "mirror";
   memoryCitationsMode?: MemoryCitationsMode;
 }) {
   const acpEnabled = params.acpEnabled !== false;
@@ -637,6 +673,10 @@ export function buildAgentSystemPrompt(params: {
     for (const file of validContextFiles) {
       lines.push(`## ${file.path}`, "", file.content, "");
     }
+  }
+
+  if (!isMinimal && params.tone) {
+    lines.push(...buildToneSection(params.tone));
   }
 
   // Skip silent replies for subagent/none modes
