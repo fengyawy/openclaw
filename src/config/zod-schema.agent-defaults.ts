@@ -149,6 +149,7 @@ export const AgentDefaultsSchema = z
       ])
       .optional(),
     verboseDefault: z.union([z.literal("off"), z.literal("on"), z.literal("full")]).optional(),
+    tone: z.union([z.literal("professional"), z.literal("casual"), z.literal("mirror")]).optional(),
     elevatedDefault: z
       .union([z.literal("off"), z.literal("on"), z.literal("ask"), z.literal("full")])
       .optional(),

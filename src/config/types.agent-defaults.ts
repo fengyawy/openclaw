@@ -1,4 +1,6 @@
 import type { ChannelId } from "../channels/plugins/types.js";
+
+export type TonePreset = "professional" | "casual" | "mirror";
 import type { AgentModelConfig, AgentSandboxConfig } from "./types.agents-shared.js";
 import type {
   BlockStreamingChunkConfig,
@@ -189,6 +191,8 @@ export type AgentDefaultsConfig = {
   thinkingDefault?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "adaptive";
   /** Default verbose level when no /verbose directive is present. */
   verboseDefault?: "off" | "on" | "full";
+  /** Tone preset for agent replies: professional, casual, or mirror (match user style). */
+  tone?: TonePreset;
   /** Default elevated level when no /elevated directive is present. */
   elevatedDefault?: "off" | "on" | "ask" | "full";
   /** Default block streaming level when no override is present. */
