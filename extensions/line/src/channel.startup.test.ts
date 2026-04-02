@@ -38,6 +38,7 @@ function createStartAccountCtx(params: {
   secret: string;
   runtime: ReturnType<typeof createRuntimeEnv>;
   abortSignal?: AbortSignal;
+  configOverrides?: Partial<ResolvedLineAccount["config"]>;
 }): ChannelGatewayContext<ResolvedLineAccount> {
   const snapshot: ChannelAccountSnapshot = {
     accountId: "default",
@@ -53,7 +54,7 @@ function createStartAccountCtx(params: {
       channelAccessToken: params.token,
       channelSecret: params.secret,
       tokenSource: "config" as const,
-      config: {} as ResolvedLineAccount["config"],
+      config: { ...params.configOverrides } as ResolvedLineAccount["config"],
     },
     cfg: {} as OpenClawConfig,
     runtime: params.runtime,
@@ -99,6 +100,37 @@ describe("linePlugin gateway.startAccount", () => {
       'LINE webhook mode requires a non-empty channel access token for account "default".',
     );
     expect(monitorLineProvider).not.toHaveBeenCalled();
+  });
+
+  it("skips probe and passes passiveMode to monitor in passive mode", async () => {
+    const { runtime, probeLineBot, monitorLineProvider } = createRuntime();
+    setLineRuntime(runtime);
+
+    const abort = new AbortController();
+    const task = linePlugin.gateway!.startAccount!(
+      createStartAccountCtx({
+        token: "token",
+        secret: "secret",
+        runtime: createRuntimeEnv(),
+        abortSignal: abort.signal,
+        configOverrides: { passiveMode: true },
+      }),
+    );
+
+    await vi.waitFor(() => {
+      expect(monitorLineProvider).toHaveBeenCalledWith(
+        expect.objectContaining({
+          channelAccessToken: "token",
+          channelSecret: "secret",
+          accountId: "default",
+          passiveMode: true,
+        }),
+      );
+    });
+
+    expect(probeLineBot).not.toHaveBeenCalled();
+    abort.abort();
+    await task;
   });
 
   it("starts provider when token and secret are present", async () => {

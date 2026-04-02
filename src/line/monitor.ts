@@ -38,6 +38,7 @@ export interface MonitorLineProviderOptions {
   abortSignal?: AbortSignal;
   webhookUrl?: string;
   webhookPath?: string;
+  passiveMode?: boolean;
 }
 
 export interface LineProviderMonitor {
@@ -297,6 +298,11 @@ export async function monitorLineProvider(
   });
 
   logVerbose(`line: registered webhook handler at ${normalizedPath}`);
+  if (opts.passiveMode) {
+    logVerbose(
+      `line: passive mode active for account ${resolvedAccountId} – skipping outbound API calls`,
+    );
+  }
 
   // Handle abort signal
   let stopped = false;

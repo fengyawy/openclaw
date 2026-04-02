@@ -392,8 +392,12 @@ export const linePlugin: ChannelPlugin<ResolvedLineAccount> = {
       return issues;
     },
     buildChannelSummary: ({ snapshot }) => buildTokenChannelStatusSummary(snapshot),
-    probeAccount: async ({ account, timeoutMs }) =>
-      getLineRuntime().channel.line.probeLineBot(account.channelAccessToken, timeoutMs),
+    probeAccount: async ({ account, timeoutMs }) => {
+      if (account.config.passiveMode) {
+        return { ok: true, skipped: true };
+      }
+      return getLineRuntime().channel.line.probeLineBot(account.channelAccessToken, timeoutMs);
+    },
     buildAccountSnapshot: ({ account, runtime, probe }) => {
       const configured = Boolean(
         account.channelAccessToken?.trim() && account.channelSecret?.trim(),
@@ -409,7 +413,7 @@ export const linePlugin: ChannelPlugin<ResolvedLineAccount> = {
       return {
         ...base,
         tokenSource: account.tokenSource,
-        mode: "webhook",
+        mode: account.config.passiveMode ? "webhook (passive)" : "webhook",
       };
     },
   },
@@ -429,20 +433,24 @@ export const linePlugin: ChannelPlugin<ResolvedLineAccount> = {
         );
       }
 
+      const passiveMode = Boolean(account.config.passiveMode);
       let lineBotLabel = "";
-      try {
-        const probe = await getLineRuntime().channel.line.probeLineBot(token, 2500);
-        const displayName = probe.ok ? probe.bot?.displayName?.trim() : null;
-        if (displayName) {
-          lineBotLabel = ` (${displayName})`;
-        }
-      } catch (err) {
-        if (getLineRuntime().logging.shouldLogVerbose()) {
-          ctx.log?.debug?.(`[${account.accountId}] bot probe failed: ${String(err)}`);
+      if (!passiveMode) {
+        try {
+          const probe = await getLineRuntime().channel.line.probeLineBot(token, 2500);
+          const displayName = probe.ok ? probe.bot?.displayName?.trim() : null;
+          if (displayName) {
+            lineBotLabel = ` (${displayName})`;
+          }
+        } catch (err) {
+          if (getLineRuntime().logging.shouldLogVerbose()) {
+            ctx.log?.debug?.(`[${account.accountId}] bot probe failed: ${String(err)}`);
+          }
         }
       }
 
-      ctx.log?.info(`[${account.accountId}] starting LINE provider${lineBotLabel}`);
+      const modeLabel = passiveMode ? " [passive]" : "";
+      ctx.log?.info(`[${account.accountId}] starting LINE provider${lineBotLabel}${modeLabel}`);
 
       const monitor = await getLineRuntime().channel.line.monitorLineProvider({
         channelAccessToken: token,
@@ -452,6 +460,7 @@ export const linePlugin: ChannelPlugin<ResolvedLineAccount> = {
         runtime: ctx.runtime,
         abortSignal: ctx.abortSignal,
         webhookPath: account.config.webhookPath,
+        passiveMode,
       });
 
       return monitor;

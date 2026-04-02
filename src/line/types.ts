@@ -26,6 +26,8 @@ interface LineAccountBaseConfig {
   responsePrefix?: string;
   mediaMaxMb?: number;
   webhookPath?: string;
+  /** Skip startup probe so an external proxy can manage the bot token across multiple instances. */
+  passiveMode?: boolean;
   groups?: Record<string, LineGroupConfig>;
 }
 
