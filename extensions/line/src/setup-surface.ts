@@ -43,8 +43,6 @@ const lineDmPolicy: ChannelSetupDmPolicy = createTopLevelChannelDmPolicy({
   getCurrent: (cfg) => cfg.channels?.line?.dmPolicy ?? "pairing",
 });
 
-export { lineSetupAdapter } from "./setup-core.js";
-
 export const lineSetupWizard: ChannelSetupWizard = {
   channel,
   status: {

@@ -11,7 +11,8 @@ import {
   type WizardPrompter,
 } from "../../../test/helpers/extensions/setup-wizard.js";
 import type { OpenClawConfig } from "../api.js";
-import { lineSetupAdapter, lineSetupWizard } from "./setup-surface.js";
+import { lineSetupAdapter } from "./setup-core.js";
+import { lineSetupWizard } from "./setup-surface.js";
 
 const lineConfigureAdapter = buildChannelSetupWizardAdapterFromSetupWizard({
   plugin: {
