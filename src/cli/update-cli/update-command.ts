@@ -685,6 +685,15 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
   suppressDeprecations();
   const invocationCwd = tryResolveInvocationCwd();
 
+  const configSnapshot = await readConfigFileSnapshot();
+  if (!configSnapshot.valid || !configSnapshot.config.update?.enabled) {
+    defaultRuntime.error(
+      "Updates are disabled by default. Set update.enabled=true in config to allow updates.",
+    );
+    defaultRuntime.exit(1);
+    return;
+  }
+
   const timeoutMs = parseTimeoutMsOrExit(opts.timeout);
   const shouldRestart = opts.restart !== false;
   if (timeoutMs === null) {
@@ -698,8 +707,6 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
     fetchGit: false,
     includeRegistry: false,
   });
-
-  const configSnapshot = await readConfigFileSnapshot();
   const storedChannel = configSnapshot.valid
     ? normalizeUpdateChannel(configSnapshot.config.update?.channel)
     : null;

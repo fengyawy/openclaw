@@ -65,6 +65,8 @@ export type OpenClawConfig = {
   logging?: LoggingConfig;
   cli?: CliConfig;
   update?: {
+    /** When true, the `openclaw update` command is allowed. Default: false (blocked). */
+    enabled?: boolean;
     /** Update channel for git + npm installs ("stable", "beta", or "dev"). */
     channel?: "stable" | "beta" | "dev";
     /** Check for updates on gateway start (npm installs only). */

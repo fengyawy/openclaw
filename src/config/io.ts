@@ -54,6 +54,7 @@ import {
   validateConfigObjectWithPlugins,
 } from "./validation.js";
 import { compareOpenClawVersions } from "./version.js";
+import { checkUnsetPolicy, checkWritePolicy } from "./write-policy.js";
 
 // Re-export for backwards compatibility
 export { CircularIncludeError, ConfigIncludeError } from "./includes.js";
@@ -1089,7 +1090,24 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
     const { snapshot } = await readConfigFileSnapshotInternal();
     let envRefMap: Map<string, string> | null = null;
     let changedPaths: Set<string> | null = null;
+
+    // Enforce write policy: check changed fields and unsetPaths against locked rules.
+    if (options.unsetPaths?.length) {
+      const unsetViolation = checkUnsetPolicy(options.unsetPaths);
+      if (unsetViolation) {
+        throw new Error(`Write policy violation: ${unsetViolation}`);
+      }
+    }
     if (snapshot.valid && snapshot.exists) {
+      const policyChanges = new Set<string>();
+      collectChangedPaths(snapshot.config, cfg, "", policyChanges);
+      if (policyChanges.size > 0) {
+        const violation = checkWritePolicy(cfg, policyChanges);
+        if (violation) {
+          throw new Error(`Write policy violation: ${violation}`);
+        }
+      }
+
       const patch = createMergePatch(snapshot.config, cfg);
       persistCandidate = applyMergePatch(snapshot.resolved, patch);
       try {
