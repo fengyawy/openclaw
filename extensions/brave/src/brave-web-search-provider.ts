@@ -93,6 +93,7 @@ const BRAVE_UI_LANG_LOCALE = /^([a-z]{2})-([a-z]{2})$/i;
 
 type BraveConfig = {
   mode?: string;
+  baseUrl?: string;
 };
 
 type BraveSearchResult = {
@@ -116,7 +117,15 @@ type BraveLlmContextResponse = {
 
 function resolveBraveConfig(searchConfig?: SearchConfigRecord): BraveConfig {
   const brave = searchConfig?.brave;
-  return brave && typeof brave === "object" && !Array.isArray(brave) ? (brave as BraveConfig) : {};
+  const config =
+    brave && typeof brave === "object" && !Array.isArray(brave) ? (brave as BraveConfig) : {};
+  if (!config.baseUrl) {
+    const envBaseUrl = process.env.BRAVE_SEARCH_BASE_URL?.trim();
+    if (envBaseUrl) {
+      return { ...config, baseUrl: envBaseUrl };
+    }
+  }
+  return config;
 }
 
 function resolveBraveMode(brave?: BraveConfig): "web" | "llm-context" {
@@ -208,6 +217,7 @@ async function runBraveLlmContextSearch(params: {
   country?: string;
   search_lang?: string;
   freshness?: string;
+  baseUrl?: string;
 }): Promise<{
   results: Array<{
     url: string;
@@ -217,7 +227,10 @@ async function runBraveLlmContextSearch(params: {
   }>;
   sources?: BraveLlmContextResponse["sources"];
 }> {
-  const url = new URL(BRAVE_LLM_CONTEXT_ENDPOINT);
+  const endpoint = params.baseUrl
+    ? `${params.baseUrl.replace(/\/+$/, "")}/res/v1/llm/context`
+    : BRAVE_LLM_CONTEXT_ENDPOINT;
+  const url = new URL(endpoint);
   url.searchParams.set("q", params.query);
   if (params.country) {
     url.searchParams.set("country", params.country);
@@ -264,8 +277,12 @@ async function runBraveWebSearch(params: {
   freshness?: string;
   dateAfter?: string;
   dateBefore?: string;
+  baseUrl?: string;
 }): Promise<Array<Record<string, unknown>>> {
-  const url = new URL(BRAVE_SEARCH_ENDPOINT);
+  const endpoint = params.baseUrl
+    ? `${params.baseUrl.replace(/\/+$/, "")}/res/v1/web/search`
+    : BRAVE_SEARCH_ENDPOINT;
+  const url = new URL(endpoint);
   url.searchParams.set("q", params.query);
   url.searchParams.set("count", String(params.count));
   if (params.country) {
@@ -530,6 +547,7 @@ function createBraveToolDefinition(
           country: country ?? undefined,
           search_lang: normalizedLanguage.search_lang,
           freshness,
+          baseUrl: braveConfig.baseUrl,
         });
         const payload = {
           query,
@@ -566,6 +584,7 @@ function createBraveToolDefinition(
         freshness,
         dateAfter,
         dateBefore,
+        baseUrl: braveConfig.baseUrl,
       });
       const payload = {
         query,
