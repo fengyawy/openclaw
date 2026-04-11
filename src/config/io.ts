@@ -1091,7 +1091,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
     let envRefMap: Map<string, string> | null = null;
     let changedPaths: Set<string> | null = null;
 
-    // Enforce write policy: check changed fields and unsetPaths against locked rules.
+    // Enforce write policy: check locked fields and unsetPaths.
     if (options.unsetPaths?.length) {
       const unsetViolation = checkUnsetPolicy(options.unsetPaths);
       if (unsetViolation) {
@@ -1099,13 +1099,9 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       }
     }
     if (snapshot.valid && snapshot.exists) {
-      const policyChanges = new Set<string>();
-      collectChangedPaths(snapshot.config, cfg, "", policyChanges);
-      if (policyChanges.size > 0) {
-        const violation = checkWritePolicy(cfg, policyChanges);
-        if (violation) {
-          throw new Error(`Write policy violation: ${violation}`);
-        }
+      const violation = checkWritePolicy(snapshot.config, cfg);
+      if (violation) {
+        throw new Error(`Write policy violation: ${violation}`);
       }
 
       const patch = createMergePatch(snapshot.config, cfg);

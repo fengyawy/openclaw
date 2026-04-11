@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type { OpenClawConfig } from "./types.openclaw.js";
 
 type FieldPolicy = { type: "locked" } | { type: "enum"; values: string[] };
@@ -24,40 +25,27 @@ function getNestedValue(obj: unknown, dotPath: string): unknown {
   return current;
 }
 
-function matchesPolicy(changedPath: string, prefix: string): "exact" | "child" | "bulk" | null {
-  if (changedPath === prefix) {
-    return "exact";
-  }
-  if (changedPath.startsWith(`${prefix}.`) || changedPath.startsWith(`${prefix}[`)) {
-    return "child";
-  }
-  if (prefix.startsWith(`${changedPath}.`)) {
-    return "bulk";
-  }
-  return null;
-}
-
 /**
- * Check whether any changed paths between oldConfig and newConfig violate
- * the write policy. Returns null if OK, or an error message string.
+ * Compare oldConfig and newConfig for each locked/constrained field directly,
+ * ignoring default-normalization noise in unrelated fields.
+ * Returns null if OK, or an error message string.
  */
 export function checkWritePolicy(
+  oldConfig: OpenClawConfig,
   newConfig: OpenClawConfig,
-  changedPaths: Set<string>,
 ): string | null {
-  for (const changed of changedPaths) {
-    for (const [prefix, policy] of WRITE_POLICY) {
-      const match = matchesPolicy(changed, prefix);
-      if (!match) {
-        continue;
-      }
+  for (const [prefix, policy] of WRITE_POLICY) {
+    const oldValue = getNestedValue(oldConfig, prefix);
+    const newValue = getNestedValue(newConfig, prefix);
 
-      if (policy.type === "locked") {
-        return `Field "${changed}" is locked and cannot be modified.`;
+    if (policy.type === "locked") {
+      if (!isDeepStrictEqual(oldValue, newValue)) {
+        return `Field "${prefix}" is locked and cannot be modified.`;
       }
+    }
 
-      if (policy.type === "enum" && match === "exact") {
-        const newValue = getNestedValue(newConfig, prefix);
+    if (policy.type === "enum") {
+      if (!isDeepStrictEqual(oldValue, newValue)) {
         if (typeof newValue !== "string" || !policy.values.includes(newValue)) {
           return `Field "${prefix}" only accepts: ${policy.values.join(", ")} (got "${String(newValue)}").`;
         }
@@ -78,15 +66,15 @@ export function checkUnsetPolicy(unsetPaths: ReadonlyArray<ReadonlyArray<string>
     }
     const dotPath = segments.join(".");
     for (const [prefix, policy] of WRITE_POLICY) {
-      const match = matchesPolicy(dotPath, prefix);
-      if (!match) {
+      const isMatch =
+        dotPath === prefix || dotPath.startsWith(`${prefix}.`) || prefix.startsWith(`${dotPath}.`);
+      if (!isMatch) {
         continue;
       }
       if (policy.type === "locked") {
         return `Field "${dotPath}" is locked and cannot be removed.`;
       }
-      // enum fields: unsetting is effectively setting to undefined, not allowed
-      if (policy.type === "enum" && match === "exact") {
+      if (policy.type === "enum" && dotPath === prefix) {
         return `Field "${dotPath}" is constrained and cannot be removed.`;
       }
     }
