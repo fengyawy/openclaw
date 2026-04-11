@@ -1099,7 +1099,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       }
     }
     if (snapshot.valid && snapshot.exists) {
-      const violation = checkWritePolicy(snapshot.config, cfg);
+      const violation = checkWritePolicy(snapshot.resolved, cfg);
       if (violation) {
         throw new Error(`Write policy violation: ${violation}`);
       }
