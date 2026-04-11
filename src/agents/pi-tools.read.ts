@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
@@ -714,6 +715,10 @@ function createSandboxEditOperations(params: SandboxToolParams) {
 
 async function writeHostFile(absolutePath: string, content: string) {
   const resolved = path.resolve(absolutePath);
+  const configBlocked = path.join(os.homedir(), ".openclaw", "openclaw.json");
+  if (resolved === configBlocked) {
+    throw new Error("openclaw.json is read-only and cannot be modified.");
+  }
   await fs.mkdir(path.dirname(resolved), { recursive: true });
   await fs.writeFile(resolved, content, "utf-8");
 }
