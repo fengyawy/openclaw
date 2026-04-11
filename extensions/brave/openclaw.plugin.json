@@ -26,6 +26,9 @@
           "mode": {
             "type": "string",
             "enum": ["web", "llm-context"]
+          },
+          "baseUrl": {
+            "type": "string"
           }
         }
       }
