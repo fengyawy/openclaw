@@ -26,8 +26,54 @@ function getNestedValue(obj: unknown, dotPath: string): unknown {
 }
 
 /**
- * Compare oldConfig and newConfig for each locked/constrained field directly,
- * ignoring default-normalization noise in unrelated fields.
+ * Check whether the original keys in `base` are preserved in `target`.
+ * New keys in `target` that don't exist in `base` (e.g. from default normalization)
+ * are ignored. Only modifications or removals of existing keys are flagged.
+ */
+function hasOriginalKeysChanged(base: unknown, target: unknown): boolean {
+  if (base === target) {
+    return false;
+  }
+  if (base == null && target == null) {
+    return false;
+  }
+  if (base == null || target == null) {
+    return true;
+  }
+
+  if (Array.isArray(base)) {
+    if (!Array.isArray(target) || base.length !== target.length) {
+      return true;
+    }
+    for (let i = 0; i < base.length; i++) {
+      if (hasOriginalKeysChanged(base[i], target[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (typeof base === "object" && typeof target === "object") {
+    const baseObj = base as Record<string, unknown>;
+    const targetObj = target as Record<string, unknown>;
+    for (const key of Object.keys(baseObj)) {
+      if (!(key in targetObj)) {
+        return true;
+      } // key removed
+      if (hasOriginalKeysChanged(baseObj[key], targetObj[key])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return !isDeepStrictEqual(base, target);
+}
+
+/**
+ * Compare oldConfig and newConfig for each locked/constrained field.
+ * For locked fields, only flags modifications or removals of existing keys;
+ * new keys added by default normalization are tolerated.
  * Returns null if OK, or an error message string.
  */
 export function checkWritePolicy(
@@ -39,7 +85,7 @@ export function checkWritePolicy(
     const newValue = getNestedValue(newConfig, prefix);
 
     if (policy.type === "locked") {
-      if (!isDeepStrictEqual(oldValue, newValue)) {
+      if (hasOriginalKeysChanged(oldValue, newValue)) {
         return `Field "${prefix}" is locked and cannot be modified.`;
       }
     }
