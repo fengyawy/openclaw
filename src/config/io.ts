@@ -1293,7 +1293,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
     try {
       await deps.fs.promises.writeFile(tmp, json, {
         encoding: "utf-8",
-        mode: 0o600,
+        mode: 0o640,
       });
 
       if (deps.fs.existsSync(configPath)) {
@@ -1307,7 +1307,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         // Windows doesn't reliably support atomic replace via rename when dest exists.
         if (code === "EPERM" || code === "EEXIST") {
           await deps.fs.promises.copyFile(tmp, configPath);
-          await deps.fs.promises.chmod(configPath, 0o600).catch(() => {
+          await deps.fs.promises.chmod(configPath, 0o640).catch(() => {
             // best-effort
           });
           await deps.fs.promises.unlink(tmp).catch(() => {
